@@ -1,0 +1,1068 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <time.h>
+#include <stdbool.h>
+#define queue 10
+#define borrowername 100
+#define max 5
+#define name 100
+int top = -1, front = -1, tail = -1;
+char approval[queue][borrowername];
+char borrow[max][name];
+struct Book
+{
+    char title[100];
+    char author[100];
+    char language[40];
+    int copiesleft;
+    int isborrowed;
+    time_t borrowedDate;
+    time_t returnDate;
+    struct Book *next;
+};
+
+typedef struct Book Book;
+Book *head = NULL;
+Book *temp = NULL;
+void displayMainMenu()
+{
+    printf("\033[96;1;3mWelcome to the library!\033[0m\n");
+    printf("1. Search\n");
+    printf("2. Display\n");
+    printf("3. Bookops\n");
+    printf("4. Admin Panel\n");
+    printf("5. Read Terms & Conditions\n");
+    printf("6. Exit\n");
+}
+
+void displaySearchMenu()
+{
+    printf("\nSearch Submenu\n");
+    printf("1. Search by Title\n");
+    printf("2. Search by Author\n");
+    printf("3. Search by Language\n");
+    printf("4. Back to Main Menu\n");
+}
+
+void displayDisplayMenu()
+{
+    printf("\nDisplay Submenu\n");
+    printf("1. Display all Book Titles\n");
+    printf("2. Display all Authors\n");
+    printf("3. Display Available books\n");
+    printf("4. Back to Main Menu\n");
+}
+
+void displayBookops()
+{
+    printf("\nBook Operation Submenu\n");
+    printf("1. Borrow a Book\n");
+    printf("2. Renew a Book\n");
+    printf("3. Return a Book\n");
+    printf("4. Back to Main Menu\n");
+}
+
+void displayAdminPanelMenu()
+{
+    printf("\nAdmin Panel\n");
+    printf("1. Add Book\n");
+    printf("2. Delete Book\n");
+    printf("3. Overdew Books.\n");
+    printf("4. Update Book Information\n");
+    printf("5. Delete All The Books\n");
+    printf("6. Delete Borrower List\n");
+    printf("7. Show All info\n");
+    printf("8. Approve Borrow Request\n");
+    printf("9. Back to Main Menu\n");
+}
+
+Book *initializeCatalog()
+
+{
+    return NULL;
+}
+void saveCatalogToFile()
+{
+    FILE *data = fopen("BookList.txt", "w");
+    if (data == NULL)
+    {
+        perror("Error opening data file");
+        exit(1);
+    }
+
+    Book *current = head;
+    while (current != NULL)
+    {
+        fprintf(data, "Title: %s\nAuthor: %s\nLanguage: %s\nCopies Available: %d\n\n", current->title, current->author, current->language, current->copiesleft);
+
+        current = current->next;
+    }
+
+    fclose(data);
+}
+Book *loadCatalogFromFile()
+{
+    FILE *data = fopen("BookList.txt", "r");
+    if (data == NULL)
+    {
+        printf("Catalog is empty.\n");
+        return NULL;
+    }
+
+    while (!feof(data))
+    {
+        Book *newBook = (Book *)malloc(sizeof(Book));
+        if (newBook == NULL)
+        {
+            perror("Memory allocation failed");
+            exit(1);
+        }
+        newBook->next = NULL;
+
+        if (fscanf(data, "Title: %[^\n]\nAuthor: %[^\n]\nLanguage: %[^\n]\nCopies Available: %d\n\n", newBook->title, newBook->author, newBook->language, &newBook->copiesleft) != 4)
+        {
+            free(newBook);
+            break;
+        }
+        if (head == NULL)
+        {
+            head = newBook;
+            temp = newBook;
+        }
+        else
+        {
+            temp->next = newBook;
+            temp = temp->next;
+        }
+    }
+
+    fclose(data);
+    return head;
+}
+bool queueisempty()
+{
+    return (front == -1);
+}
+bool queueisfull()
+{
+    return (tail == queue - 1);
+}
+bool isempty()
+{
+    return (top == -1);
+}
+bool isfull()
+{
+    return (top == max - 1);
+}
+void enqueue(const char *borrower)
+{
+    int x;
+    if (queueisfull())
+    {
+        printf("Please approve the borrow request, No more Borrower can't be added now\n");
+    }
+    else
+    {
+        if (queueisempty())
+        {
+            front = 0;
+        }
+        tail++;
+        strcpy(approval[tail], borrower);
+    }
+}
+void dequeue()
+{
+    if (queueisempty())
+    {
+        printf("Line is empty\n");
+    }
+    else
+    {
+        printf("%s is served\n", approval[front]);
+        front++;
+        if (front > tail)
+        {
+            front = -1;
+            tail = -1;
+        }
+    }
+}
+void print()
+{
+    int i = front;
+    if (queueisempty())
+    {
+        printf("No Borrower\n");
+    }
+    else
+    {
+        printf("Borrower List:\n");
+        while (i <= tail)
+        {
+            printf("%s\n", approval[i]);
+            i++;
+        }
+    }
+}
+void push(const char *titleToBorrow)
+{
+    if (isfull())
+    {
+        printf("You have reached the max limit\n");
+    }
+    else
+    {
+        top++;
+        strcpy(borrow[top], titleToBorrow);
+    }
+}
+void borrowlist()
+{
+    if (isempty())
+    {
+        printf("You cart is empty\n");
+    }
+    else
+    {
+        for (int i = 0; i < top + 1; i++)
+        {
+            printf("%d: %s\n", i + 1, borrow[i]);
+        }
+        FILE *q = fopen("Borrower.txt", "a+");
+        fprintf(q, "\n-----------------------------------------\n");
+        fclose(q);
+    }
+}
+void delteborrowlist()
+{
+    front = -1;
+    FILE *q = fopen("Borrower.txt", "w");
+    fclose(q);
+    printf("Borrower List is cleared.\n");
+}
+void searchByTitle(Book *catalog, const char *titleToSearch)
+{
+    int found = 0;
+
+    if (catalog == NULL)
+    {
+        printf("The Catalog is empty.\n");
+        return;
+    }
+
+    printf("Search Results for Title: %s\n", titleToSearch);
+
+    Book *current = catalog;
+    while (current != NULL)
+    {
+        if (strcmp(titleToSearch, current->title) == 0)
+        {
+            printf("Title: %s\n", current->title);
+            printf("Author: %s\n", current->author);
+            printf("Language: %s\n", current->language);
+            if (current->isborrowed == 0)
+            {
+                printf("Status: Available\n");
+            }
+            else
+            {
+                printf("Status: Borrowed.\n");
+            }
+
+            found = 1;
+            break;
+        }
+
+        current = current->next;
+    }
+
+    if (!found)
+    {
+        printf("Book not found.\n");
+    }
+}
+
+void searchByAuthor(Book *catalog, const char *authorToSearch)
+{
+    int found = 0;
+    int bookcount = 0;
+
+    if (catalog == NULL)
+    {
+        printf("Catalog is empty.\n");
+        return;
+    }
+
+    printf("Search results for Author: %s\n", authorToSearch);
+
+    Book *current = catalog;
+
+    while (current != NULL)
+    {
+        if (strcmp(authorToSearch, current->author) == 0)
+        {
+            printf("Title: %s\n", current->title);
+            printf("Author: %s\n", current->author);
+            printf("Language: %s\n", current->language);
+            if (current->isborrowed == 0)
+            {
+                printf("Status: Available\n");
+            }
+            else
+            {
+                printf("Status: Borrowed.\n");
+            }
+
+            found = 1;
+            bookcount++;
+        }
+        current = current->next;
+    }
+
+    if (found)
+    {
+        printf("Total books written by %s: %d\n", authorToSearch, bookcount);
+    }
+
+    else
+    {
+        printf("No books found by %s\n", authorToSearch);
+    }
+}
+
+void displayAllBookTitle(Book *catalog)
+{
+    if (catalog == NULL)
+    {
+        printf("Catalog is empty.\n");
+        return;
+    }
+
+    printf("List of ALL Book Titles:\n");
+
+    Book *current = catalog;
+
+    while (current != NULL)
+    {
+        printf("%s\n", current->title);
+        current = current->next;
+    }
+}
+
+void displayAllAuthors(Book *catalog)
+{
+    if (catalog == NULL)
+    {
+        printf("Catalog is empty.\n");
+        return;
+    }
+
+    printf("List of all Authors:\n");
+
+    Book *current = catalog;
+
+    while (current != NULL)
+    {
+        printf("%s\n", current->author);
+        current = current->next;
+    }
+}
+void displayAvailableBooks()
+{
+    Book *current = head;
+    if (current == NULL)
+    {
+        printf("Catalog is empty.\n");
+        return;
+    }
+
+    printf("+--------------------------------+--------------------------------+----------------------+------------------+\n");
+    printf("| %-30s | %-30s | %-20s | %-16s |\n", "Title", "Author", "Language", "Copies Available");
+    printf("+--------------------------------+--------------------------------+----------------------+------------------+\n");
+
+    while (current != NULL)
+    {
+        if (current->copiesleft > 0)
+        {
+            int maxTitleLength = 30;
+            int maxAuthorLength = 30;
+            int maxLanguageLength = 20;
+
+            char truncatedTitle[maxTitleLength + 1];
+            strncpy(truncatedTitle, current->title, maxTitleLength);
+            truncatedTitle[maxTitleLength] = '\0'; // Null-terminate the truncated title
+
+            printf("| %-30s | %-30s | %-20s | %-16d |\n",
+                truncatedTitle,
+                current->author,
+                current->language,
+                current->copiesleft);
+
+            printf("\n");
+        }
+        current = current->next;
+    }
+
+    printf("+--------------------------------+--------------------------------+----------------------+------------------+\n");
+}
+
+Book *addBook()
+{
+    Book *newBook = (Book *)malloc(sizeof(Book));
+    if (newBook == NULL)
+    {
+        perror("Memory allocation failed");
+        exit(1);
+    }
+    newBook->isborrowed = 0;
+    newBook->next = head;
+    head = newBook;
+
+    printf("Write the Title: \n");
+    fgets(newBook->title, sizeof(newBook->title), stdin);
+    newBook->title[strcspn(newBook->title, "\n")] = '\0';
+
+    printf("Write the name of the Author: \n");
+    fgets(newBook->author, sizeof(newBook->author), stdin);
+    newBook->author[strcspn(newBook->author, "\n")] = '\0';
+
+    printf("Write the Language of the Book: \n");
+    fgets(newBook->language, sizeof(newBook->language), stdin);
+    newBook->language[strcspn(newBook->language, "\n")] = '\0';
+
+    printf("How many copies you want to add: ");
+    scanf("%d", &newBook->copiesleft);
+    while (getchar() != '\n')
+        ;
+
+    saveCatalogToFile();
+
+    return newBook;
+}
+
+void checkOverdueBooks(Book *catalog)
+{
+    time_t currentTime;
+    time(&currentTime);
+
+    Book *current = catalog;
+
+    while (current != NULL)
+    {
+        if (current->isborrowed)
+        {
+            if (currentTime > current->returnDate)
+            {
+                double fine = 10.0 * difftime(currentTime, current->returnDate) / (24 * 60 * 60);
+                printf("Overdue Book: %s, Fine: $%.2lf\n", current->title, fine);
+            }
+        }
+        current = current->next;
+    }
+}
+
+Book *deleteBook()
+{
+    if (head == NULL)
+    {
+        printf("The catalog is empty.\n");
+        return head;
+    }
+
+    Book *prev = NULL;
+    Book *current = head;
+    char titleToDelete[100];
+    printf("Enter the title to delete: ");
+    scanf("%[^\n]", titleToDelete);
+
+    while (current != NULL)
+    {
+        if (strcmp(current->title, titleToDelete) == 0)
+        {
+            if (prev == NULL)
+            {
+                head = current->next;
+            }
+            else
+            {
+                prev->next = current->next;
+            }
+
+            free(current);
+            printf("%s has been deleted.\n", titleToDelete);
+            return head;
+        }
+
+        prev = current;
+        current = current->next;
+    }
+
+    printf("Book not found: %s\n", titleToDelete);
+    return head;
+}
+
+void updateBookInfo(Book *catalog, const char *titletoUpdate)
+{
+    int updated = 0;
+
+    Book *current = catalog;
+    while (current != NULL)
+    {
+        if (strcmp(current->title, titletoUpdate) == 0)
+        {
+            printf("Current Book Information\n");
+            printf("Title: %s\n", current->title);
+            printf("Author: %s\n", current->author);
+            printf("Language: %s\n", current->language);
+
+            if (current->isborrowed == 0)
+            {
+                printf("Status: Available\n");
+            }
+            else
+            {
+                printf("Status: Borrowed\n");
+            }
+
+           char newTitle[100];
+            char newAuthor[100];
+            char newLanguage[100];
+            printf("Enter Updated Information\n");
+            printf("New Title: ");
+            scanf("%s", newTitle);
+            printf("Author Name: ");
+            scanf("%s", newAuthor);
+            printf("New Language: ");
+            scanf("%s", newLanguage);
+
+            strcpy(current->title, newTitle);
+            strcpy(current->author, newAuthor);
+            strcpy(current->language, newLanguage);
+
+            printf("Book Information Updated\n");
+            updated = 1;
+            break;
+        }
+
+        current = current->next;
+    }
+
+    if (!updated)
+    {
+        printf("Book Not found: %s\n", titletoUpdate);
+    }
+}
+
+void borrowBook(Book *head)
+{
+    Book *current = head;
+    int flag;
+    int i, x = 0;
+    char titleToBorrow[100];
+    char borrower[100];
+    printf("Write your name: \n");
+    fgets(borrower, sizeof(borrower), stdin);
+    borrower[strcspn(borrower, "\n")] = '\0';
+    enqueue(borrower);
+    time_t currentTime;
+    time(&currentTime);
+    char *borrdate;
+    borrdate = ctime(&currentTime);
+    borrdate[strcspn(borrdate, "\n")] = '\0';
+    printf("%s\n",borrdate);
+
+    printf("Borrow date: %s\n", borrdate);
+    time_t returnTime = currentTime + 14 * 24 * 60 * 60;
+    char *retdate;
+    retdate = ctime(&returnTime);
+    retdate[strcspn(retdate, "\n")] = '\0';
+
+    printf("Return date: %s\n", retdate);
+
+    while (1)
+    {
+        current = head;
+        printf("Enter the title of the book you want to borrow: ");
+        fgets(titleToBorrow, sizeof(titleToBorrow), stdin);
+        titleToBorrow[strcspn(titleToBorrow, "\n")] = '\0';
+
+        while (current != NULL)
+        {
+            if ((strcmp(current->title, titleToBorrow)) == 0)
+            {
+                if (current->isborrowed == 0)
+                {
+
+                    x++;
+                    current->copiesleft--;
+
+                    if (current->copiesleft == 0)
+                    {
+                        current->isborrowed = 1;
+                    }
+
+                    push(titleToBorrow);
+                    flag = 1;
+                    printf("\"%s\" is Borrowed Successfully.\n", titleToBorrow);
+
+                    FILE *q = fopen("Borrower.txt", "a+");
+                    fprintf(q, "%d. %s\n", x, titleToBorrow);
+                    fclose(q);
+                    if (isfull())
+                    {
+                        FILE *q = fopen("Borrower.txt", "a+");
+                        fprintf(q, "\nThe books are successfully Borrowed By %s\nBorrow date: %s\nReturn date: %s\n", borrower, borrdate, retdate);
+                        fclose(q);
+                        printf("You have reached the max limit\n");
+                        borrowlist();
+                        printf("The books are successfully Borrowed By %s at: %s\nTo be returned on: %s\n", borrower, borrdate, retdate);
+                        saveCatalogToFile();
+                        return;
+                    }
+                }
+                else
+                {
+                    printf("Book not found or all copies are already borrowed: %s\n", titleToBorrow);
+                }
+            }
+            current = current->next;
+        }
+        printf("\n1. Borrow more\n2. Exit\n");
+        scanf("%d", &i);
+        getchar();
+        switch (i)
+        {
+        case 1:
+            continue;
+            break;
+        case 2:
+            break;
+        default:
+            printf("Invalid Choice\n");
+        }
+
+        if (i == 2)
+        {
+            break;
+        }
+    }
+
+    if (flag == 1)
+    {
+        FILE *q = fopen("Borrower.txt", "a+");
+        fprintf(q, "\nThe books are successfully Borrowed By %s\nBorrow date: %s\nReturn date: %s\n", borrower, borrdate, retdate);
+        fclose(q);
+        borrowlist();
+        top = -1;
+        printf("The books are successfully Borrowed By %s at: %s\nTo be returned on: %s\n", borrower, borrdate, retdate);
+    }
+    else
+    {
+        printf("Book not found\n");
+    }
+
+    saveCatalogToFile();
+}
+
+void showallinfo(Book *catalog)
+{
+    Book *current = catalog;
+    while (current != NULL)
+    {
+        printf("\nTitle: %s\nAuthor: %s\nLanguage: %s\nCopies Left: %d\nIsborrowed: %d\n", current->title, current->author, current->language, current->copiesleft, current->isborrowed);
+        current = current->next;
+    }
+}
+
+void renewBook(Book *catalog, char *titleToRenew)
+{
+    Book *current = catalog;
+
+    while (current != NULL)
+    {
+        if (strcmp(current->title, titleToRenew) == 0)
+        {
+            if (current->isborrowed == 1)
+            {
+                time_t currentTime;
+                time(&currentTime);
+
+                if (currentTime > current->returnDate)
+                {
+                    float fine = 10.0 * ((int)(difftime(time(NULL), current->returnDate) / (24 * 60 * 60)));
+                    printf("You have been fined $%f. Cannot renew.\n", fine);
+                }
+
+                else
+                {
+                    printf("%s has been renewed successfully.\n", titleToRenew);
+                }
+            }
+            else
+            {
+                printf("%s is not currently borrowed.\n", titleToRenew);
+            }
+            return;
+        }
+        current = current->next;
+    }
+
+    printf("Book not found.\n");
+}
+
+void returnBook(Book *catalog, char *titleToReturn)
+{
+    Book *current = catalog;
+
+    while (current != NULL)
+    {
+        if (strcmp(current->title, titleToReturn) == 0)
+        {
+            if (current->isborrowed == 1)
+            {
+                time_t currentTime;
+                time(&currentTime);
+
+                if (currentTime > current->returnDate)
+                {
+                    float fine = 10.0 * ((int)(difftime(time(NULL), current->returnDate) / (24 * 60 * 60)));
+                    printf("You have been fined $%f. Cannot renew.\n", fine);
+                }
+                current->isborrowed = 0;
+                printf("%s has been returned successfully.\n");
+            }
+
+            else
+            {
+                printf("%s is not currently borrowed.\n");
+            }
+            return;
+        }
+
+        current = current->next;
+    }
+    printf("Book not found:%s\n", titleToReturn);
+}
+
+void freeCatalog(Book *catalog)
+{
+    Book *current = catalog;
+
+    while (current != NULL)
+    {
+        Book *temp = current;
+        current = current->next;
+        free(temp);
+    }
+}
+void deleteall()
+{
+    if (head == NULL)
+    {
+        printf("The catalog is empty.\n");
+        return;
+    }
+
+    Book *prev = NULL;
+    Book *current = head;
+
+    while (current != NULL)
+    {
+        prev = current->next;
+        free(current);
+        current = prev;
+    }
+    head = NULL;
+
+    printf("All Book has deleted\n");
+    saveCatalogToFile();
+}
+
+void terms()
+{
+    FILE *t = fopen("Terms.txt", "r");
+    if (t == NULL)
+    {
+        printf("Error opening file.\n");
+        return;
+    }
+
+    char line[100];
+    while (!feof(t))
+    {
+        fgets(line, sizeof(line), t);
+        printf("%s", line);
+    }
+
+    fclose(t);
+}
+
+int main()
+{
+    int choice;
+    char title[100];
+    char author[100];
+    char language[40];
+    char titleToUpdate[100];
+    char titleToSearch[100];
+    char authorToSearch[100];
+    char languageToSearch[100];
+    char titleToRenew[100];
+    char titleToReturn[100];
+    char safetyWord[100];
+    char fileName[100] = "catalog.txt";
+    char booklist[30] = "BookList.txt";
+
+    Book *catalog = loadCatalogFromFile();
+
+    while (1)
+    {
+        displayMainMenu();
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice)
+        {
+        case 1:
+
+            while (1)
+            {
+                displaySearchMenu();
+                printf("Enter your choice: ");
+                scanf("%d", &choice);
+
+                switch (choice)
+                {
+                case 1:
+
+                    printf("Enter the title of the book: ");
+                    scanf("%s", titleToSearch);
+                    searchByTitle(catalog, titleToSearch);
+
+                    break;
+
+                case 2:
+
+                    printf("Enter the author of the book: ");
+                    scanf("%s", authorToSearch);
+                    searchByTitle(catalog, authorToSearch);
+
+                    break;
+
+                case 3:
+
+                    printf("Enter the language of the book: ");
+                    scanf("%s", languageToSearch);
+                    searchByTitle(catalog, languageToSearch);
+
+                    break;
+
+                case 4:
+                    break;
+
+                default:
+
+                    printf("Invalid Choice.\n");
+                }
+
+                if (choice == 4)
+                {
+                    break;
+                }
+            }
+            break;
+
+        case 2:
+
+            while (1)
+            {
+                displayDisplayMenu();
+                printf("Enter your choice: ");
+                scanf("%d", &choice);
+                while (getchar() != '\n')
+                    ;
+
+                switch (choice)
+                {
+                case 1:
+
+                    displayAllBookTitle(catalog);
+
+                    break;
+
+                case 2:
+
+                    displayAllAuthors(catalog);
+
+                    break;
+
+                case 3:
+
+                    displayAvailableBooks(catalog);
+
+                    break;
+
+                case 4:
+
+                    break;
+
+                default:
+
+                    printf("Invalid choice.\n");
+                }
+
+                if (choice == 4)
+                {
+                    break;
+                }
+            }
+            break;
+
+        case 3:
+            while (1)
+            {
+                displayBookops();
+                printf("Enter your choice: ");
+                scanf("%d", &choice);
+                while (getchar() != '\n')
+                    ;
+
+                switch (choice)
+                {
+                case 1:
+                    borrowBook(head);
+                    break;
+
+                case 2:
+
+                    printf("Enter the title of the book you want to renew: ");
+                    scanf("%s", titleToRenew);
+
+                    renewBook(catalog, titleToRenew);
+                    break;
+
+                case 3:
+
+                    printf("Enter the title of the book you want to return: ");
+                    scanf("%s", titleToReturn);
+
+                    returnBook(catalog, titleToReturn);
+                    break;
+
+                case 4:
+                    break;
+
+                default:
+
+                    printf("Invalid choice.\n");
+                }
+
+                if (choice == 4)
+                {
+                    break;
+                }
+            }
+
+            break;
+
+        case 4:
+
+            printf("Enter the Password: ");
+            scanf("%s", safetyWord);
+
+            if (strcmp(safetyWord, "o") == 0)
+            {
+                printf("\nWelcome Admin\n");
+
+                while (1)
+                {
+                    displayAdminPanelMenu();
+                    printf("Enter your choice: ");
+                    scanf("%d", &choice);
+                    while (getchar() != '\n')
+                        ;
+
+                    switch (choice)
+                    {
+                    case 1:
+
+                        addBook();
+                        break;
+
+                    case 2:
+
+                        deleteBook();
+                        saveCatalogToFile();
+                        break;
+
+                    case 3:
+
+                        checkOverdueBooks(catalog);
+                        break;
+
+                    case 4:
+
+                        printf("Enter the title to update: ");
+                        scanf("%s", titleToUpdate);
+                        updateBookInfo(catalog, titleToUpdate);
+                        saveCatalogToFile();
+                        break;
+
+                    case 5:
+                        deleteall();
+                        break;
+                    case 6:
+                        delteborrowlist();
+                        break;
+                    case 7:
+                        showallinfo(catalog);
+                        break;
+                    case 8:
+                        if (queueisempty())
+                        {
+                            printf("No one at the line.\n");
+                            break;
+                        }
+                        else
+                        {
+                            printf("Now serving %s\n", approval[front]);
+                            dequeue();
+                        }
+                        break;
+                    case 9:
+                        break;
+
+                    default:
+
+                        printf("Invalid choice.\n");
+                    }
+
+                    if (choice == 9)
+                    {
+                        break;
+                    }
+                }
+
+                break;
+            }
+
+        case 6:
+
+            saveCatalogToFile();
+            freeCatalog(catalog);
+            return 0;
+        case 5:
+            terms();
+            break;
+
+        default:
+
+            printf("Invalid choice.\n");
+        }
+    }
+
+    return 0;
+}
